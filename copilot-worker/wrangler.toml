@@ -1,0 +1,32 @@
+name = "proptech-copilot"
+main = "src/index.js"
+compatibility_date = "2026-09-22"
+
+# Public settings only. The Anthropic key is a secret, set by the owner:
+#   npx wrangler secret put ANTHROPIC_API_KEY
+[vars]
+ALLOWED_ORIGINS = "https://joseedson18jc.github.io,http://127.0.0.1:5178,http://localhost:5178"
+MODEL = "claude-sonnet-5-5"
+MAX_TOKENS = "2000"
+EFFORT = "low"
+
+# Per visitor IP: 10 requests per minute (a question with tool rounds uses 2-4).
+[[ratelimits]]
+name = "PER_IP"
+namespace_id = "41001"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
+# Whole site: 120 requests per minute per Cloudflare location.
+[[ratelimits]]
+name = "GLOBAL"
+namespace_id = "41002"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
+[observability]
+enabled = true
