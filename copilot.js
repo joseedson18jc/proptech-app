@@ -40,6 +40,7 @@
     session_expired: "Sua sessão do Claude expirou. Entre de novo e tente outra vez.",
     empty_completion: "Sem resposta desta vez. Pergunte de outro jeito.",
     tools_unavailable: "Esta visualização não deixa o copiloto mexer na tela. Pergunte de novo.",
+    bad_history: "Não consegui continuar esta conversa. Toque em Nova conversa.",
   };
   const HIDE = ["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"];
   const SUGGEST = [
@@ -129,6 +130,7 @@
     if (body && COPY[body.error]) return body.error;
     if (status === 429) return "rate_limited";
     if (status === 413) return "too_large";
+    if (status === 400) return "bad_history";
     return "upstream";
   }
   async function callProxy(signal) {
@@ -142,7 +144,21 @@
     if (!res.ok) throw { code: errCode(res.status, body) };
     return body;
   }
-  async function askProxy(q, out) {
+  async function askProxy(q, out, retried) {
+    try {
+      return await askProxyOnce(q, out);
+    } catch (e) {
+      // A rejected history would fail forever: start fresh and resend once.
+      if (e && e.code === "bad_history" && !retried) {
+        conv = [];
+        bubble("sys", "Nova conversa iniciada para continuar.");
+        out.innerHTML = thinking();
+        return askProxy(q, out, true);
+      }
+      throw e;
+    }
+  }
+  async function askProxyOnce(q, out) {
     if (conv.length > MAX_CONV_MESSAGES || JSON.stringify(conv).length > MAX_CONV_BYTES) {
       conv = [];
       bubble("sys", "Nova conversa iniciada: a anterior ficou longa demais.");
@@ -157,7 +173,11 @@
         const text = data.content.filter((b) => b.type === "text").map((b) => b.text).join("\n\n").trim();
         if (text) { shown = shown ? shown + "\n\n" + text : text; out.innerHTML = fmt(shown); scroll(); }
         if (data.stop_reason === "refusal") throw { code: "refusal" };
-        if (data.stop_reason !== "tool_use") return { text: shown, truncated: data.stop_reason === "max_tokens" };
+        if (data.stop_reason !== "tool_use") {
+          // A tool call cut off by max_tokens has no result: drop this turn so later requests stay valid.
+          if (data.content.some((b) => b.type === "tool_use")) conv = conv.slice(0, mark);
+          return { text: shown || "A resposta foi cortada. Pergunte de forma mais curta.", truncated: data.stop_reason === "max_tokens" };
+        }
         const results = data.content.filter((b) => b.type === "tool_use").map((b) => {
           const r = App.copilotTools.runTool(b.name, b.input, note);
           return r.ok ? { type: "tool_result", tool_use_id: b.id, content: r.content } : { type: "tool_result", tool_use_id: b.id, content: r.content, is_error: true };
