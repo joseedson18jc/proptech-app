@@ -203,7 +203,10 @@
     let applied = false;
     const apply = () => { if (!applied) { applied = true; App.set({ view }); } };
     if (document.startViewTransition && !reduce && App.state.view !== view) {
-      try { document.startViewTransition(apply); } catch (_) { apply(); }
+      try {
+        const t = document.startViewTransition(apply);
+        [t.ready, t.finished, t.updateCallbackDone].forEach((p) => p && p.catch(() => {})); // a skipped transition is not an error
+      } catch (_) { apply(); }
       setTimeout(apply, 120); // never let navigation wait on an animation the browser may skip
     } else apply();
     try { history.replaceState(null, "", "#" + view); } catch (_) { /* sandboxed */ }
