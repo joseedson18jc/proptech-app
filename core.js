@@ -199,7 +199,9 @@
     if (!App.views[view]) return;
     closeOverlays(true);
     App._sameView = null;
-    App.set({ view });
+    const reduce = root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (document.startViewTransition && !reduce && App.state.view !== view) document.startViewTransition(() => App.set({ view }));
+    else App.set({ view });
     try { history.replaceState(null, "", "#" + view); } catch (_) { /* sandboxed */ }
     root.scrollTo(0, 0);
     if (anchor) setTimeout(() => { const t = document.getElementById(anchor); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60);
@@ -309,6 +311,10 @@
     if (App.views[hash]) App.state = { ...App.state, view: hash };
     bind();
     App.render();
+    const top = document.querySelector(".top");
+    const onScroll = () => top.classList.toggle("scrolled", root.scrollY > 8);
+    root.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
   };
 
   root.App = App;
