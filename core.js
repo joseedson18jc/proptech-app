@@ -200,8 +200,12 @@
     closeOverlays(true);
     App._sameView = null;
     const reduce = root.matchMedia && root.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (document.startViewTransition && !reduce && App.state.view !== view) document.startViewTransition(() => App.set({ view }));
-    else App.set({ view });
+    let applied = false;
+    const apply = () => { if (!applied) { applied = true; App.set({ view }); } };
+    if (document.startViewTransition && !reduce && App.state.view !== view) {
+      try { document.startViewTransition(apply); } catch (_) { apply(); }
+      setTimeout(apply, 120); // never let navigation wait on an animation the browser may skip
+    } else apply();
     try { history.replaceState(null, "", "#" + view); } catch (_) { /* sandboxed */ }
     root.scrollTo(0, 0);
     if (anchor) setTimeout(() => { const t = document.getElementById(anchor); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60);
