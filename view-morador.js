@@ -118,6 +118,13 @@
     }).join("");
   }
 
+  function heroStats(s) {
+    const pub = PT.publicListings(s.listings);
+    const avg = pub.length ? pub.reduce((a, l) => a + PT.monthlyCost(l).total, 0) / pub.length : 0;
+    const ver = pub.length ? pub.filter((l) => l.verificado).length / pub.length : 0;
+    return `<div><b>${pub.length}</b><span>imóveis publicados</span></div><div><b>${App.brl(Math.round(avg / 10) * 10)}</b><span>custo total médio</span></div><div><b>${App.pct(ver)}</b><span>verificados</span></div>`;
+  }
+
   function results(s) {
     const list = filtered(s);
     return list.length
@@ -145,6 +152,7 @@
               <label class="hf wide" for="fQ"><span>Palavra-chave</span><input id="fQ" data-input="filter-q" value="${esc(f.q)}" placeholder="pet, mobiliado, varanda…" autocomplete="off"></label>
             </div>
             <button class="btn primary lg block" data-action="scroll-results" id="heroCta">Ver ${n} imóve${n === 1 ? "l" : "is"}</button>
+            <div class="hero-stats">${heroStats(s)}</div>
             <p class="hero-note">Piloto em ${esc(city.nome)}, ${city.uf} · Bairros A e B · dados fictícios</p>
           </div>
         </section>
