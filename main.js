@@ -10,5 +10,5 @@
       if (d && App.state.view === "dono") App.render();
     }).catch(() => { App.downloads = null; });
   }
-  App.initCopilot(hasRuntime);
+  App.initCopilot();
 })(typeof self !== "undefined" ? self : this);
